@@ -2,7 +2,7 @@ import requests
 import json
 import matplotlib.pyplot as plt
 from forex_python.converter import CurrencyRates
-import time
+from time import *
 import os
 
 
@@ -10,9 +10,96 @@ MINUTE_ONE = 1
 DAY_ONE = 24
 DAY_SEVEN = 7
 
+
+class Alerter:
+
+	def toIST(self, gmHour):
+		return (gmHour + 5)%24
+
+	def isNightTime(self, hour):
+		if hour <= 7 and hour > 0:
+			return True
+
+		return False
+
+	def doAlert(self, message, mode):
+		gmHourNow = strftime("%H", gmtime())
+		istHour = self.toIST(int(gmHourNow))
+		isItNight = self.isNightTime(istHour)
+		if isItNight == True:
+			# Set system volume for emergencies as 40 and 20 as normal
+			if mode == 'ALERT':
+				os.system("osascript -e 'set volume output volume 45'")
+			else:
+				os.system("osascript -e 'set volume output volume 20'")
+		else:
+			# set sysmte volume for emergencies as 80 and 60 as normal
+			if mode == 'ALERT':
+				os.system("osascript -e 'set volume output volume 60'")
+			else:
+				os.system("osascript -e 'set volume output volume 40'")
+
+		os.system('Say -v Daniel '+message)
+
+
+
+class NotifSubscriptions:
+
+	subsAlert = ''
+
+	coinsToMonitor 		= ['BTC', 	'BTC']
+	coinsPriceData 		= ['2850', 	'2400'] #USD
+	coinsTrendForNotif 	= ['MORE',	'LESS']
+	comparatorFunction = ''
+
+	def load(self):
+		self.subsAlert = Alerter()
+
+	def compareMore(self, arg1, arg2):
+		if float(arg1) > float(arg2):
+			return True
+		return False
+
+	def compareLess(self, arg1, arg2):
+		if float(arg1) < float(arg2):
+			return True
+		return False
+
+
+	coinsNotifComparator = {
+		'MORE' 	: compareMore,
+		'LESS'	: compareLess
+	}
+
+	def createAlert(self, message, reps):
+		eachRep = 0
+		while eachRep < reps:
+			os.system('Say '+message)
+			eachRep = eachRep + 1
+
+	def check(self, coinSymbol, coinPrice, coinTrend):
+		iterator = 0
+		while iterator < len(self.coinsToMonitor):
+			if coinSymbol == self.coinsToMonitor[iterator]:
+				if coinTrend == self.coinsTrendForNotif[iterator] :
+					result = False
+				
+					if coinTrend == 'MORE':
+						result = str(self.compareMore(float(coinPrice), float(self.coinsPriceData[iterator])))
+					elif coinTrend == 'LESS':
+						result = str(self.compareLess(float(coinPrice), float(self.coinsPriceData[iterator])))
+
+					if str(result) == 'True':
+						message = " Alert! alert! alert! Price of "+ coinSymbol + " went "+coinTrend+" than threshold of "+str(self.coinsPriceData[iterator])
+						self.subsAlert.doAlert(message, "ALERT")
+			iterator = iterator + 1
+
+
 class CoinAlert:
 
-	coinsToMonitor = ['BTC', 'LTC', 'GNT', 'ETH', 'DASH', 'XRP', 'XMR', 'ANT', 'REP', 'DCR', 'EOS']
+	coinTickerAlerts = ""
+
+	coinsToMonitor = ['BTC', 'LTC', 'GNT', 'ETH', 'DASH', 'XRP', 'XMR', 'ANT', 'REP', 'DCR', 'EOS', 'GNO']
 	deltaTime = MINUTE_ONE
 	tickerURL = 'https://api.coinmarketcap.com/v1/ticker/'
 	deltaCoinPerChange = 1.0
@@ -28,6 +115,8 @@ class CoinAlert:
 	EXTRA_DATA_DROP = "[DROP]"
 	EXTRA_DATA_FLAT = "[FLAT]"
 
+	notificationCenter = ''
+
 	def load(self, delta):
 		if self.deltaTime != delta:
 			self.deltaTime = delta
@@ -36,6 +125,9 @@ class CoinAlert:
 			self.lastPriceChanged.append(0.0)
 			self.liveData.append(0.0)
 			eachIdx = eachIdx + 1
+		self.notificationCenter = NotifSubscriptions()
+		self.notificationCenter.load()
+		self.coinTickerAlerts = Alerter()
 
 	def requestGet(self, url):
 		print "requesting url: "+url
@@ -98,6 +190,12 @@ class CoinAlert:
 							else:
 								alert = self.FLAT_SIGNAL
 
+							# Check threshold alerts
+							if str(alert) == str(self.RISE_SIGNAL):
+								self.notificationCenter.check(symbol, tickerObj[eachIdx]['price_usd'], 'MORE')
+							elif str(alert) == str(self.DROP_SIGNAL):
+								self.notificationCenter.check(symbol, tickerObj[eachIdx]['price_usd'], 'LESS')
+
 							#check extra data
 							if currentPercentageChange < 0.0:
 								alert = alert + self.EXTRA_DATA_DROP
@@ -107,26 +205,19 @@ class CoinAlert:
 								alert = alert + self.EXTRA_DATA_FLAT
 
 
-
 							if currentPercentageChange > 1.0 and currentPercentageChange > (self.lastPriceChanged[symbolIndex] + 1.0) :
-								os.system('Say -v Daniel price increased. ')
+								self.coinTickerAlerts.doAlert(' Price increased.', 'NORMAL')
 								pincreased = 1
 								self.lastPriceChanged[symbolIndex] = currentPercentageChange
 								alert = self.ALERT_SIGNAL + alert
 							elif currentPercentageChange < (self.lastPriceChanged[symbolIndex] - 1.0):
-								os.system('Say -v Daniel price dropped. ')
+								self.coinTickerAlerts.doAlert(' Price dropped.', 'NORMAL')
 								pincreased = -1
 								self.lastPriceChanged[symbolIndex] = currentPercentageChange
 								alert = self.ALERT_SIGNAL + alert
 							else:
 								alert = self.SPACER_SIGNAL + alert
 							status = symbol + " " +str(tickerObj[eachIdx]["name"])
-							# if pincreased == -1:
-							# 	status = status + " \t[ \/ ]"
-							# elif pincreased == 1:
-							# 	status = status + " \t[ /\\ ]"
-							# else:
-							# 	status = status + " \t[ -- ]"
 							status = status + alert
 							print status + " USD: $"+str(tickerObj[eachIdx]["price_usd"])+"\t==> 1hr %age: "+str(currentPercentageChange) + ", 24hr %age: "+str(tickerObj[eachIdx]["percent_change_24h"])
 						eachIdx = eachIdx + 1
@@ -134,7 +225,7 @@ class CoinAlert:
 				print "Ignore Exception"
 
 			print ""
-			time.sleep(7)
+			sleep(7)
 
 coinAlert = CoinAlert()
 coinAlert.load(MINUTE_ONE)
