@@ -1,0 +1,37 @@
+{
+	"alerts": {
+		"btc_more": {
+			"symbol": "BTC",
+			"price": "2850",
+			"band": "MORE"
+		},
+		"btc_less": {
+			"symbol": "BTC",
+			"price": "2400",
+			"band": "LESS"
+		}
+	},
+	"bot_options": {
+		"voice": "-v Daniel",
+		"word_rate": "-r 210"
+	},
+	"init_params": {
+		
+	},
+	"runtime_params": {
+		"coinsToMonitor": [ "BTC", "LTC", "GNT", "ETH", "DASH", "XRP", "XMR", "ANT", "REP", "DCR", "EOS", "GNO"],
+		
+		"topAssetsFilterThreshold": 5,
+		"topAssetsMaxRank": 15
+	},
+	"volume": {
+		"nightmode": {
+			"default": 10,
+			"alert": 15
+		},
+		"daymode": {
+			"default": 40,
+			"alert": 60
+		}
+	}
+}
