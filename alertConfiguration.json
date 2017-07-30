@@ -24,6 +24,7 @@
 		"topAssetsFilterThreshold": 5,
 		"topAssetsMaxRank": 15
 	},
+	"timeZoneHour": 5,
 	"volume": {
 		"nightmode": {
 			"default": 10,

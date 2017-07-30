@@ -36,9 +36,10 @@ Submodule to send out alerts on the mac system
 class Alerter:
 
 	# convert gmt hour to ist by adding offset 
-	# for hours (+30min is ignored as of now)
-	def toIST(self, gmHour):
-		return (gmHour + 5)%24
+	# for hours
+	def toLocalTime(self, gmHour, configuration):
+		totTime = 24 + int(configuration["timeZoneHour"])	#since it can be -ve and modulus of -ve is not same as +ve numbers
+		return (gmHour + totTime)%24
 
 	# Decides if it is night time or not
 	def isNightTime(self, hour):
@@ -53,8 +54,8 @@ class Alerter:
 	def doAlert(self, message, mode, configuration):
 
 		gmHourNow = strftime("%H", gmtime())
-		istHour = self.toIST(int(gmHourNow))
-		isItNight = self.isNightTime(istHour)
+		localHour = self.toLocalTime(int(gmHourNow), configuration)
+		isItNight = self.isNightTime(localHour)
 
 		#osascript subcommand string
 		volcontroller = 'set volume output volume '
