@@ -10,7 +10,9 @@ MINUTE_ONE = 1
 DAY_ONE = 24
 DAY_SEVEN = 7
 
-
+'''
+Submodule to send out alerts on the mac system
+'''
 class Alerter:
 
 	def toIST(self, gmHour):
@@ -29,9 +31,9 @@ class Alerter:
 		if isItNight == True:
 			# Set system volume for emergencies as 40 and 20 as normal
 			if mode == 'ALERT':
-				os.system("osascript -e 'set volume output volume 45'")
+				os.system("osascript -e 'set volume output volume 15'")
 			else:
-				os.system("osascript -e 'set volume output volume 20'")
+				os.system("osascript -e 'set volume output volume 10'")
 		else:
 			# set sysmte volume for emergencies as 80 and 60 as normal
 			if mode == 'ALERT':
@@ -41,8 +43,9 @@ class Alerter:
 
 		os.system('Say -v Daniel '+message)
 
-
-
+'''
+Submodule to check subscriptions and send notifs if required.
+'''
 class NotifSubscriptions:
 
 	subsAlert = ''
@@ -106,6 +109,10 @@ class CoinAlert:
 	lastPriceChanged = []
 	liveData = []
 
+	topAssets = []
+	TOP_ASSETS_MAX_RANK = 15	#Set the max top ranking assets you want to see
+	TOP_ASSETS_FILTER_THRESHOLD = 5	#set this to the top ones which you want to see in the additional data
+
 	DROP_SIGNAL = "[ \/ ]"
 	RISE_SIGNAL = "[ /\\ ]"
 	FLAT_SIGNAL = "[ -- ]"
@@ -151,6 +158,21 @@ class CoinAlert:
 			eachIdx = eachIdx + 1
 		return -1
 
+	def isAmongstTopAsset(self, assetRank):
+		if int(assetRank) <= self.TOP_ASSETS_MAX_RANK and int(assetRank) > 0:
+			return True
+		return False
+
+	def getAssetRankFromObject(self, assetObject):
+		return assetObject["rank"]
+
+	def customSortTopAssets(self, a, b):
+		if float(a["percent_change_24h"]) > float(b["percent_change_24h"]):
+			return -1
+		elif float(a["percent_change_24h"]) == float(b["percent_change_24h"]):
+			return 0
+		return 1
+
 	def start(self):
 		while True:
 			self.results = []
@@ -164,8 +186,13 @@ class CoinAlert:
 				else:
 					eachIdx = 0
 					print str(len(tickerObj))
-
+					topRankers = []
 					while eachIdx < len(tickerObj):
+						#check if this asset is in the top ones to monitor
+						if self.isAmongstTopAsset(self.getAssetRankFromObject(tickerObj[eachIdx])):
+							#then push this to top rankers index
+							topRankers.append(tickerObj[eachIdx])
+
 						if tickerObj[eachIdx]['symbol'] in self.coinsToMonitor:
 							symbol = tickerObj[eachIdx]['symbol']
 							timeStamp = "percent_change_1h"
@@ -221,6 +248,18 @@ class CoinAlert:
 							status = status + alert
 							print status + " USD: $"+str(tickerObj[eachIdx]["price_usd"])+"\t==> 1hr %age: "+str(currentPercentageChange) + ", 24hr %age: "+str(tickerObj[eachIdx]["percent_change_24h"])
 						eachIdx = eachIdx + 1
+
+					#sort the toppers for gainers list
+					if len(topRankers) > 0:
+						topRankers.sort(self.customSortTopAssets)
+						#print the top X assets
+						topIdx = 0
+						print "\n::TOP GAINERS (% 24hrs) ::"
+						while topIdx < len(topRankers) and topIdx < self.TOP_ASSETS_FILTER_THRESHOLD:
+							print topRankers[topIdx]["symbol"]+"\t"+topRankers[topIdx]["name"]+" ==>\t"+str(topRankers[topIdx][self.getDeltaCode(DAY_ONE)])
+							topIdx = topIdx + 1
+
+
 			except:
 				print "Ignore Exception"
 
