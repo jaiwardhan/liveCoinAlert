@@ -1,7 +1,5 @@
 import requests
 import json
-import matplotlib.pyplot as plt
-from forex_python.converter import CurrencyRates
 from time import *
 import os
 
